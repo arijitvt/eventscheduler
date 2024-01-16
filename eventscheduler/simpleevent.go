@@ -2,7 +2,7 @@ package eventscheduler
 
 type SimpleEvent struct {
 	Name     string
-	Callback func()
+	Callback func(string)
 	id       Id
 	isActive bool
 }
@@ -40,7 +40,7 @@ func (e *SimpleEvent) MarkEventActive(state bool) {
 }
 
 func (e *SimpleEvent) Execute() {
-	e.Callback()
+	e.Callback(e.Name)
 }
 
 var _ Event = &SimpleEvent{}

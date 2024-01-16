@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -12,31 +13,30 @@ func main() {
 	stopChannel := make(chan bool)
 
 	// eventScheduler := eventscheduler.NewSyncEventScheduler("Sync Scheduler", stopChannel)
-	eventScheduler := eventscheduler.NewConcurrentEventScheduler("Concurrent scheduler", stopChannel, 5)
-	testEventScheduler(eventScheduler)
+	eventScheduler := eventscheduler.NewConcurrentEventScheduler("Concurrent scheduler", stopChannel, 10)
+	testEventScheduler(eventScheduler, 1000)
 	stopChannel <- true
+	fmt.Println("Exiting main")
 
 }
 
-func testEventScheduler(eventScheduler eventscheduler.EventSchedulerInterface) {
+func testEventScheduler(eventScheduler eventscheduler.EventSchedulerInterface, counter int) {
 	var wg sync.WaitGroup
 	go eventScheduler.ExecuteEventLoop()
+	var eventList []eventscheduler.Event
+	wg.Add(counter)
+	for i := 0; i < counter; i++ {
+		ev := &eventscheduler.SimpleEvent{
+			Name: "Event " + strconv.FormatInt(int64(i), 10),
+			Callback: func(eventName string) {
+				defer wg.Done()
+				fmt.Println("Starting event ", time.Now(), eventName)
+				time.Sleep(time.Second * 2)
+				fmt.Println("Completing event ", time.Now(), eventName)
 
-	wg.Add(2)
-	eventList := []eventscheduler.Event{
-		&eventscheduler.SimpleEvent{Name: "First", Callback: func() {
-			defer wg.Done()
-			fmt.Println("Executing first event ")
-			time.Sleep(time.Second * 2)
-			fmt.Println("First Event is done ")
-		}},
-		&eventscheduler.SimpleEvent{Name: "Second", Callback: func() {
-			defer wg.Done()
-			fmt.Println("Executing second event ")
-			time.Sleep(time.Second * 1)
-			fmt.Println("Second Event is done ")
-
-		}},
+			},
+		}
+		eventList = append(eventList, ev)
 	}
 
 	for _, ev := range eventList {

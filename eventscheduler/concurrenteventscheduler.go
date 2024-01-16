@@ -3,10 +3,11 @@ package eventscheduler
 import "fmt"
 
 type ConcurrentEventScheduler struct {
-	Name         string
-	eventChannel chan bool
-	eventList    []Event
-	stopCh       chan bool
+	Name              string
+	eventChannel      chan bool
+	concurrentChannel chan bool
+	eventList         []Event
+	stopCh            chan bool
 }
 
 func (s *ConcurrentEventScheduler) AddEvent(ev Event) bool {
@@ -63,10 +64,11 @@ func (s *ConcurrentEventScheduler) ExecuteEventLoop() {
 				fmt.Println("Can not execute inactive event ", e.EventName())
 				continue
 			}
-
+			s.concurrentChannel <- true
 			go func() {
 				e.Execute()
 				e.MarkEventActive(false)
+				<-s.concurrentChannel
 			}()
 
 		case <-s.stopCh:
@@ -79,9 +81,10 @@ func (s *ConcurrentEventScheduler) ExecuteEventLoop() {
 
 func NewConcurrentEventScheduler(name string, stop chan bool, levelOfConc int) EventSchedulerInterface {
 	return &ConcurrentEventScheduler{
-		Name:         name,
-		eventChannel: make(chan bool, levelOfConc),
-		stopCh:       stop,
+		Name:              name,
+		eventChannel:      make(chan bool),
+		concurrentChannel: make(chan bool, levelOfConc),
+		stopCh:            stop,
 	}
 
 }
